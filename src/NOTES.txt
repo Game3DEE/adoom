@@ -1,0 +1,9 @@
+- left up: gun icons
+- left down: health (100 [icon])
+- right down: ammo ([icon] 050)
+
+convert -alpha copy HUDFont_A.bmp HUDFont.bmp -background '#00000000' -flatten HUDFont.png
+convert HUDIcons.bmp HUDIcons.png
+
+Font: 44x44 (4x3) = 176x132
+Icons: 34x34 (5x3) = 170x102
