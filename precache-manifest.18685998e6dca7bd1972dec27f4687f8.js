@@ -28,7 +28,7 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "assets/img/HUDIcons.png"
   },
   {
-    "revision": "ec0a2852ce8f35e69bc6d296e4d3fa1c",
+    "revision": "744672d1fee437c85e9cd97842d63ae6",
     "url": "assets/img/HUDIcons2.png"
   },
   {
@@ -52,12 +52,12 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "icons/icons-512.png"
   },
   {
-    "revision": "db3fda4f3dd13d334da393dbfa0ced24",
+    "revision": "bd399ac18bde9290f42a88c66d1be374",
     "url": "index.html"
   },
   {
-    "revision": "3f993dc57abaf013878c",
-    "url": "main.312e3a982d8e7f9d92c4.bundle.js"
+    "revision": "acf00014223341e684a8",
+    "url": "main.ed202f6e426cac3cd562.bundle.js"
   },
   {
     "revision": "bf38d0c9760162342f12cd9b44fbf4ef",
