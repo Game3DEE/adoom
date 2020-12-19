@@ -10,11 +10,21 @@ import { createWorldFromBSP } from '../genesis3d/bsp'
 import WPS from '../kaitai/adoom_wps'
 import { KaitaiStream } from 'kaitai-struct'
 
+const numberSize = 44;
+const iconSize = 34;
+
 export default class MainScene extends Scene3D {
   player: ExtendedObject3D
   keys: any
   firstPersonControls: FirstPersonControls
   tmpVec3 = new THREE.Vector3();
+  // HUD variables
+  healthDigits: Phaser.GameObjects.Sprite[] = [];
+  ammoDigits: Phaser.GameObjects.Sprite[] = [];
+  weaponIcons: Phaser.GameObjects.Sprite[] = [];
+  // Stats
+  health: number = 100;
+  ammo: number = 50;
 
   constructor() {
     super({ key: 'MainScene' })
@@ -29,44 +39,61 @@ export default class MainScene extends Scene3D {
     this.load.binary('wps', 'assets/levels/level1_1.wps')
 
     this.load.spritesheet('numbers', 'assets/img/HUDFont2.png', {
-      frameWidth: 44,
-      frameHeight: 44,
+      frameWidth: numberSize,
+      frameHeight: numberSize,
     })
     this.load.spritesheet('icons', 'assets/img/HUDIcons2.png', {
-      frameWidth: 34,
-      frameHeight: 34,
+      frameWidth: iconSize,
+      frameHeight: iconSize,
     })
   }
 
-  drawNumber(x, y, number) {
-    let fontSize = 34 * 2;
+  drawNumber(number, sprites: Phaser.GameObjects.Sprite[]) {
+    number = Math.floor(number)
     let c1 = Math.floor(number / 100);
     let c2 = Math.floor((number % 100) / 10);
     let c3 = Math.floor(number % 10);
-    this.add.sprite(x, y - fontSize, 'numbers', c1).setOrigin(0,0).scale = 2;
-    this.add.sprite(x + fontSize, y - fontSize, 'numbers', c2).setOrigin(0,0).scale = 2;
-    this.add.sprite(x + fontSize * 2, y - fontSize, 'numbers', c3).setOrigin(0,0).scale = 2;
+    sprites[0].setFrame(c1)
+    sprites[1].setFrame(c2)
+    sprites[2].setFrame(c3)
   }
 
-  create() {
-    this.third.warpSpeed('camera', 'light', 'sky').then(({lights}) => {
-      lights!.directionalLight.intensity = 0.5;
-      lights!.ambientLight.intensity = 0.3;
-    })
+  createHUD() {
+    const scale = 2;
+    const fontSpacing = (numberSize -10) * scale;
+    const iconSpacing = (iconSize + 5) * scale;
 
-    const scale = 0.02;
-    
-    //this.third.physics.debug?.enable();
+    // Available Weapons
+    this.weaponIcons = [ // frame 9 is empty frame
+      this.add.sprite(10 + 0*iconSpacing, 10, 'icons', 0).setOrigin(0,0),
+      this.add.sprite(10 + 1*iconSpacing, 10, 'icons', 1).setOrigin(0,0).setVisible(false),
+      this.add.sprite(10 + 2*iconSpacing, 10, 'icons', 2).setOrigin(0,0).setVisible(false),
+      this.add.sprite(10 + 3*iconSpacing, 10, 'icons', 3).setOrigin(0,0).setVisible(false),
+      this.add.sprite(10 + 4*iconSpacing, 10, 'icons', 4).setOrigin(0,0).setVisible(false),
+    ];
+    this.weaponIcons.forEach(w => w.scale = scale);
 
-    // Guns
-    this.add.sprite(10, 10, 'icons', 0).setOrigin(0,0).scale = 2;
+    // Helper for creating set of 3 digits using sprites
+    const createDigits = (x, y): Phaser.GameObjects.Sprite[] => {
+      let digits: Phaser.GameObjects.Sprite[] = [
+        this.add.sprite(x, y - fontSpacing, 'numbers', 0).setOrigin(0,0),
+        this.add.sprite(x + fontSpacing, y - fontSpacing, 'numbers', 0).setOrigin(0,0),
+        this.add.sprite(x + fontSpacing * 2, y - fontSpacing, 'numbers', 0).setOrigin(0,0),
+      ];
+      digits.forEach(spr => spr.scale = scale);
+      return digits;
+    }
 
     // Health & Ammo
-    this.drawNumber(10, this.cameras.main.height - 20, 100);
+    this.healthDigits = createDigits(10, this.cameras.main.height - 20);
     this.add.sprite(15 + 210, this.cameras.main.height - 12 - 34*2, 'icons', 10).setOrigin(0,0).scale = 2;
-    this.drawNumber(this.cameras.main.width - 240, this.cameras.main.height - 20, 50);
+    this.ammoDigits = createDigits(this.cameras.main.width - 240, this.cameras.main.height - 20);
     this.add.sprite(this.cameras.main.width - 300, this.cameras.main.height - 12 - 34*2, 'icons', 11).setOrigin(0,0).scale = 2;
+  }
 
+  createLevel() {
+    const scale = 0.02;
+    
     const bsp = this.cache.binary.get('bsp');
     const wps = this.cache.binary.get('wps');
 
@@ -87,7 +114,9 @@ export default class MainScene extends Scene3D {
 
     const parsed = new WPS(new KaitaiStream(wps));
     console.log(parsed);
+  }
 
+  createPlayer() {
     let v = new THREE.Vector3();
     v.set(2825,-521,3390).multiplyScalar(0.02); // from entities
 
@@ -102,6 +131,19 @@ export default class MainScene extends Scene3D {
     this.player.body.setAngularFactor(0, 0, 0)
     this.player.body.setFriction(0.8)
     this.player.castShadow = false
+  }
+
+  create() {
+    this.third.warpSpeed('camera', 'light', 'sky').then(({lights}) => {
+      lights!.directionalLight.intensity = 0.5;
+      lights!.ambientLight.intensity = 0.3;
+    })
+
+    //this.third.physics.debug?.enable();
+
+    this.createHUD();
+    this.createLevel();
+    this.createPlayer();
 
     // add first person controls
     this.firstPersonControls = new FirstPersonControls(this.third.camera, this.player, {})
@@ -132,6 +174,9 @@ export default class MainScene extends Scene3D {
   update(time: number, delta: number) {
     if (!this.player || !this.keys) return
 
+    this.drawNumber(this.health, this.healthDigits);
+    this.drawNumber(this.ammo, this.ammoDigits);
+
     const rotation = this.third.camera.getWorldDirection(this.tmpVec3)
     const theta = Math.atan2(rotation.x, rotation.z)
     const speed = 3
@@ -161,4 +206,3 @@ export default class MainScene extends Scene3D {
     this.player.body.setVelocity(vx, vy, vz)
   }
 }
-
