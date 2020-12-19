@@ -97,20 +97,35 @@ export default class MainScene extends Scene3D {
     const bsp = this.cache.binary.get('bsp');
     const wps = this.cache.binary.get('wps');
 
-    const worldMesh = createWorldFromBSP(bsp);
-    worldMesh.children.forEach(c => {
+    const worldBsp = createWorldFromBSP(bsp);
+    worldBsp.world.children.forEach(c => {
       c.scale.setScalar(scale);  
     })
-    console.log(worldMesh);
-    this.third.add.existing( worldMesh );
+    console.log(worldBsp.world);
+    this.third.add.existing( worldBsp.world );
 
     // XXX currently only create physics for the world mesh itself, not the models inside
     // (some of them are doors, and need to be a seperate physics object)
-    this.third.physics.add.existing( worldMesh.children[0] as ExtendedObject3D, {
+    this.third.physics.add.existing( worldBsp.world.children[0] as ExtendedObject3D, {
       shape: 'concave',
       mass: 0,
       addChildren: false,
     });
+
+    const triggers = worldBsp.entities.filter(ent => ent.classname === 'Trigger');
+    triggers.forEach(trig => {
+      const modelName = trig.properties.get('Model');
+      if (modelName) {
+        const object = worldBsp.world.getObjectByName(modelName);
+        if (object) {
+          (object as THREE.Mesh).material = new THREE.MeshBasicMaterial({ wireframe: true, color: 0xff00ff});
+        } else {
+          console.log(`Cannot find model "${modelName}" for trigger!`, trig)
+        }
+      } else {
+        console.log(`Trigger has no model!`, trig)
+      }
+    })
 
     const parsed = new WPS(new KaitaiStream(wps));
     console.log(parsed);

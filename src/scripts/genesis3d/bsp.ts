@@ -4,12 +4,18 @@ import { THREE } from '@enable3d/phaser-extension';
 
 import { KaitaiStream } from 'kaitai-struct';
 
+interface Entity {
+  name: string
+  classname: string
+  properties: Map<string,string>
+}
+
 export const createWorldFromBSP = (
   data: ArrayBuffer,
   exlcudeSkyBox: boolean = true,
-): THREE.Object3D => {
+): { entities: Entity[], world: THREE.Group } => {
   let textable = {};
-  
+
   function getMaterialByTexture(texId, textures, texdata, palettes) {
     // Shortcut - texture already setup
     if (textable[texId] !== undefined)
@@ -169,65 +175,55 @@ export const createWorldFromBSP = (
     return new THREE.Mesh(geo, materials);
   }
 
-  let group = new THREE.Object3D();
+  let group = new THREE.Group();
   models.forEach(model => {
     let mesh = createModel(model);
     group.add(mesh);
   })
 
-  console.log(entities)
+  let ents = entities.map(ent => {
+    let classname, name;
+    let properties = new Map<string,string>();
 
-  class Class {
-    constructor(public name: string) {
-
-    }
-  }
-
-  entities.forEach(ent => {
-    let classname, typename;
-    ent.pairs.forEach(pair => {
-      if (pair.key === 'classname') {
-        classname = pair.value;
-      }
-      if (pair.key === '%typename%') {
-        typename = pair.value;
-      }
-    });
-    // Check if this was a class definition
-    if (classname === '%ypedef%' && typename) {
-      // yup, so create class
-    }
-  });
-
-  entities.forEach(ent => {
-    let classname, name, origin, model;
     ent.pairs.forEach(pair => {
       switch(pair.key) {
         case 'classname':
           classname = pair.value;
           break;
-        case 'origin':
-          origin = pair.value.split(' ').map(v => parseFloat(v));
-          break;
         case '%name%':
           name = pair.value;
           break;
-        case 'Model':
-          model = parseInt(pair.value);
-          break;
+        default:
+          properties.set(pair.key, pair.value)
       }
-    })
-    if (classname === '%Model%' && model !== undefined) {
-      console.log(name, model, origin, ent)
-      let m = group.children[model];
-      console.log(m)
-      m.name = name;
-      if (/^(trigger|action)/i.test(name)) {
-        m.visible = false;
+    });
+    return {
+      name,
+      classname,
+      properties,
+    }
+  });
+  console.log(ents)
+
+  // Move and name submodels in the bsp
+  // (we translate the geometry so we can easily
+  // rotate the objects from their origin)
+  const pos = new THREE.Vector3();
+  ents.forEach(ent => {
+    if (ent.classname === '%Model%') {
+      const origin = ent.properties.get('origin').split(' ').map(v => parseFloat(v));
+      if (ent.properties.has('Model')) {
+        const modelNr = parseInt(ent.properties.get('Model'));
+        let m = group.children[modelNr] as THREE.Mesh;
+        m.name = ent.name;
+        m.position.fromArray(origin).multiplyScalar(0.02);
+        m.geometry.translate(-origin[0], -origin[1], -origin[2]);
       }
-      //m.position.fromArray(origin).multiplyScalar(0.02);
     }
   })
 
-  return group;
+  return {
+    world: group,
+    entities: ents,
+  };
 }
