@@ -20,7 +20,7 @@ types:
       - id: element_count
         type: s4
       - id: elements
-        if: not is_data_chunk_type
+        if: not is_data_chunk_type and not is_ent_data
         size: element_size
         type:
           switch-on: type
@@ -47,9 +47,15 @@ types:
       - id: data
         size: element_size * element_count
         if: is_data_chunk_type
+      - id: entity_list
+        type: entity_list
+        if: is_ent_data
+        size: element_size * element_count
     instances:
+      is_ent_data:
+          value: type == chunk_type::entdata
       is_data_chunk_type:
-        value: type == chunk_type::intdata or type == chunk_type::texdata or type == chunk_type::lightdata or type == chunk_type::intdata
+        value: type == chunk_type::texdata or type == chunk_type::lightdata
 
   header:
     seq:
@@ -280,6 +286,37 @@ types:
       - id: leaf_to
         type: s4
 
+  entity_list:
+    seq:
+      - id: num_entities
+        type: u4
+      - id: entities
+        type: entity
+        repeat: expr
+        repeat-expr: num_entities
+
+  entity:
+    seq:
+      - id: pair_count
+        type: u4
+      - id: pairs
+        type: entity_pair
+        repeat: expr
+        repeat-expr: pair_count
+
+  entity_pair:
+    seq:
+      - id: key_len
+        type: u4
+      - id: key
+        type: strz
+        size: key_len
+      - id: value_len
+        type: u4
+      - id: value
+        type: strz
+        size: value_len
+
   system_time:
     seq:
       - id: year
@@ -326,7 +363,7 @@ enums:
     13: vert_index
     14: verts
     15: rgb_verts
-    16: intdata
+    16: entdata
     17: texinfos
     18: textures
     19: texdata

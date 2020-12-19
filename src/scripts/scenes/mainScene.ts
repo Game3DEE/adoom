@@ -49,7 +49,10 @@ export default class MainScene extends Scene3D {
   }
 
   create() {
-    this.third.warpSpeed('camera', 'light', 'sky')
+    this.third.warpSpeed('camera', 'light', 'sky').then(({lights}) => {
+      lights!.directionalLight.intensity = 0.5;
+      lights!.ambientLight.intensity = 0.3;
+    })
 
     const scale = 0.02;
     
@@ -71,6 +74,7 @@ export default class MainScene extends Scene3D {
     worldMesh.children.forEach(c => {
       c.scale.setScalar(scale);  
     })
+    console.log(worldMesh);
     this.third.add.existing( worldMesh );
 
     // XXX currently only create physics for the world mesh itself, not the models inside
@@ -85,7 +89,7 @@ export default class MainScene extends Scene3D {
     console.log(parsed);
 
     let v = new THREE.Vector3();
-    v.copy(parsed.items[0].pos).multiplyScalar(0.02);
+    v.set(2825,-521,3390).multiplyScalar(0.02); // from entities
 
     // add player
     this.player = new ExtendedObject3D();

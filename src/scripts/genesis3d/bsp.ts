@@ -36,16 +36,20 @@ export const createWorldFromBSP = (
       THREE.UVMapping, THREE.RepeatWrapping, THREE.RepeatWrapping);
     map.needsUpdate = true;
   
-    return textable[texId] = new THREE.MeshBasicMaterial({ map, side: THREE.DoubleSide });
+    return textable[texId] = new THREE.MeshLambertMaterial({ map, side: THREE.DoubleSide });
   }
 
   let bsp = new BSP(new KaitaiStream(data));
-
+  
   let models, faces, verts, vertIndex;
   let texinfos, textures, texdata, palettes;
+  let entities;
 
   bsp.chunks.forEach( chunk => {
     switch(chunk.type) {
+      case BSP.ChunkType.ENTDATA:
+        entities = chunk.entityList.entities;
+        break;
       case BSP.ChunkType.PALETTES:
         palettes = chunk.elements;
         break;
@@ -73,9 +77,8 @@ export const createWorldFromBSP = (
     }
   });
 
-  let materials: THREE.Material[] = [];
-
-  function createGeo(model) {
+  function createModel(model) {
+    let materials: THREE.Material[] = [];
     let position: number[] = [];
     let uv: number[] = [];
     let lastTexId = -1;
@@ -154,20 +157,76 @@ export const createWorldFromBSP = (
       }
     }
 
+    currGroup.end = position.length / 3;
+    groups.push( currGroup );
+
     let geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
     geo.computeVertexNormals();
     groups.forEach(({start,end,materialIndex}) => geo.addGroup(start,end-start,materialIndex));
 
-    return geo;
+    return new THREE.Mesh(geo, materials);
   }
 
   let group = new THREE.Object3D();
   models.forEach(model => {
-    let geo = createGeo(model);
-    let mesh = new THREE.Mesh(geo, materials);
+    let mesh = createModel(model);
     group.add(mesh);
+  })
+
+  console.log(entities)
+
+  class Class {
+    constructor(public name: string) {
+
+    }
+  }
+
+  entities.forEach(ent => {
+    let classname, typename;
+    ent.pairs.forEach(pair => {
+      if (pair.key === 'classname') {
+        classname = pair.value;
+      }
+      if (pair.key === '%typename%') {
+        typename = pair.value;
+      }
+    });
+    // Check if this was a class definition
+    if (classname === '%ypedef%' && typename) {
+      // yup, so create class
+    }
+  });
+
+  entities.forEach(ent => {
+    let classname, name, origin, model;
+    ent.pairs.forEach(pair => {
+      switch(pair.key) {
+        case 'classname':
+          classname = pair.value;
+          break;
+        case 'origin':
+          origin = pair.value.split(' ').map(v => parseFloat(v));
+          break;
+        case '%name%':
+          name = pair.value;
+          break;
+        case 'Model':
+          model = parseInt(pair.value);
+          break;
+      }
+    })
+    if (classname === '%Model%' && model !== undefined) {
+      console.log(name, model, origin, ent)
+      let m = group.children[model];
+      console.log(m)
+      m.name = name;
+      if (/^(trigger|action)/i.test(name)) {
+        m.visible = false;
+      }
+      //m.position.fromArray(origin).multiplyScalar(0.02);
+    }
   })
 
   return group;
