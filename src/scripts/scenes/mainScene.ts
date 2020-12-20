@@ -25,6 +25,8 @@ export default class MainScene extends Scene3D {
   // Stats
   health: number = 100;
   ammo: number = 50;
+  // level data
+  worldBsp: any;
 
   constructor() {
     super({ key: 'MainScene' })
@@ -97,26 +99,26 @@ export default class MainScene extends Scene3D {
     const bsp = this.cache.binary.get('bsp');
     const wps = this.cache.binary.get('wps');
 
-    const worldBsp = createWorldFromBSP(bsp);
-    worldBsp.world.children.forEach(c => {
+    this.worldBsp = createWorldFromBSP(bsp);
+    this.worldBsp.world.children.forEach(c => {
       c.scale.setScalar(scale);  
     })
-    console.log(worldBsp.world);
-    this.third.add.existing( worldBsp.world );
+    console.log(this.worldBsp.world);
+    this.third.add.existing( this.worldBsp.world );
 
     // XXX currently only create physics for the world mesh itself, not the models inside
     // (some of them are doors, and need to be a seperate physics object)
-    this.third.physics.add.existing( worldBsp.world.children[0] as ExtendedObject3D, {
+    this.third.physics.add.existing( this.worldBsp.world.children[0] as ExtendedObject3D, {
       shape: 'concave',
       mass: 0,
       addChildren: false,
     });
 
-    const triggers = worldBsp.entities.filter(ent => ent.classname === 'Trigger');
+    const triggers = this.worldBsp.entities.filter(ent => ent.classname === 'Trigger');
     triggers.forEach(trig => {
       const modelName = trig.properties.get('Model');
       if (modelName) {
-        const object = worldBsp.world.getObjectByName(modelName);
+        const object = this.worldBsp.world.getObjectByName(modelName);
         if (object) {
           (object as THREE.Mesh).material = new THREE.MeshBasicMaterial({ wireframe: true, color: 0xff00ff});
         } else {
@@ -132,8 +134,12 @@ export default class MainScene extends Scene3D {
   }
 
   createPlayer() {
+    // Use "DeathMatchStart" for DM spawnpoints
+    const start = this.worldBsp?.entities.filter(ent => ent.classname === 'PlayerStart')[0]
+    const pos = start.properties.get('Origin').split(' ').filter(v => parseFloat(v))
+    //const orient = parseFloat(start.properties.get('Orientation'));
     let v = new THREE.Vector3();
-    v.set(2825,-521,3390).multiplyScalar(0.02); // from entities
+    v.fromArray(pos).multiplyScalar(0.02); // XXX scale hack
 
     // add player
     this.player = new ExtendedObject3D();
