@@ -100,12 +100,10 @@ export default class MainScene extends Scene3D {
     const wps = this.cache.binary.get('wps');
 
     this.worldBsp = createWorldFromBSP(bsp);
-    this.worldBsp.world.children.forEach(c => {
-      c.scale.setScalar(scale);  
-    })
-    console.log(this.worldBsp.world);
+    this.worldBsp.world.scale.setScalar(scale);
     this.third.add.existing( this.worldBsp.world );
-
+    console.log(this.worldBsp);
+    
     // XXX currently only create physics for the world mesh itself, not the models inside
     // (some of them are doors, and need to be a seperate physics object)
     this.third.physics.add.existing( this.worldBsp.world.children[0] as ExtendedObject3D, {
@@ -139,11 +137,12 @@ export default class MainScene extends Scene3D {
     const pos = start.properties.get('Origin').split(' ').filter(v => parseFloat(v))
     //const orient = parseFloat(start.properties.get('Orientation'));
     let v = new THREE.Vector3();
-    v.fromArray(pos).multiplyScalar(0.02); // XXX scale hack
+    v.fromArray(pos).multiplyScalar(0.02);
 
     // add player
     this.player = new ExtendedObject3D();
     this.player.position.copy(v)
+
     this.third.physics.add.existing(this.player, {
       shape: 'sphere',
       radius: 0.3,

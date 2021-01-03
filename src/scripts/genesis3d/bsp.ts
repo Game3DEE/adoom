@@ -206,8 +206,6 @@ export const createWorldFromBSP = (
   console.log(ents)
 
   // Move and name submodels in the bsp
-  // (we translate the geometry so we can easily
-  // rotate the objects from their origin)
   const pos = new THREE.Vector3();
   ents.forEach(ent => {
     if (ent.classname === '%Model%') {
@@ -216,7 +214,9 @@ export const createWorldFromBSP = (
         const modelNr = parseInt(ent.properties.get('Model'));
         let m = group.children[modelNr] as THREE.Mesh;
         m.name = ent.name;
-        m.position.fromArray(origin).multiplyScalar(0.02);
+        // (we translate the geometry so we can easily
+        // rotate the objects from their origin)
+        m.position.fromArray(origin);
         m.geometry.translate(-origin[0], -origin[1], -origin[2]);
       }
     }
